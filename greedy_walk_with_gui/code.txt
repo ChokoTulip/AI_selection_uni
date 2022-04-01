@@ -1,0 +1,657 @@
+classdef Kadlec_VSC_Task_1 < matlab.apps.AppBase
+
+    % Properties that correspond to app components
+    properties (Access = public)
+        UIFigure                     matlab.ui.Figure
+        GridLayout                   matlab.ui.container.GridLayout
+        LeftPanel                    matlab.ui.container.Panel
+        RunButton                    matlab.ui.control.Button
+        VolbaelovfunkceButtonGroup   matlab.ui.container.ButtonGroup
+        fxxi2Button                  matlab.ui.control.RadioButton
+        fxAdxi2Acos2pixiButton       matlab.ui.control.RadioButton
+        fx418929dxisinxi05Button     matlab.ui.control.RadioButton
+        Omezenprox1x2EditFieldLabel  matlab.ui.control.Label
+        GetMinX                      matlab.ui.control.EditField
+        GetMaxX                      matlab.ui.control.EditField
+        minLabel                     matlab.ui.control.Label
+        maxLabel                     matlab.ui.control.Label
+        HodnotyprvniteracestartingpointLabel  matlab.ui.control.Label
+        ProhledvanokolLabel          matlab.ui.control.Label
+        x1StartPoint1                matlab.ui.control.EditField
+        x2StartPoint1                matlab.ui.control.EditField
+        VolbaButtonGroup             matlab.ui.container.ButtonGroup
+        KruhButton                   matlab.ui.control.RadioButton
+        tverecButton                 matlab.ui.control.RadioButton
+        Prumer                       matlab.ui.control.NumericEditField
+        MaxprmrdlkastranyLabel       matlab.ui.control.Label
+        PocetIteracLabel             matlab.ui.control.Label
+        NumOfIterations              matlab.ui.control.EditField
+        x1Label                      matlab.ui.control.Label
+        x2Label                      matlab.ui.control.Label
+        x1StartPoint2                matlab.ui.control.EditField
+        x1StartPoint3                matlab.ui.control.EditField
+        x2StartPoint2                matlab.ui.control.EditField
+        x2StartPoint3                matlab.ui.control.EditField
+        x1StartPoint4                matlab.ui.control.EditField
+        x2StartPoint4                matlab.ui.control.EditField
+        Label                        matlab.ui.control.Label
+        Label_2                      matlab.ui.control.Label
+        Label_3                      matlab.ui.control.Label
+        Label_4                      matlab.ui.control.Label
+        redLabel                     matlab.ui.control.Label
+        blueLabel                    matlab.ui.control.Label
+        yellowLabel                  matlab.ui.control.Label
+        purpleLabel                  matlab.ui.control.Label
+        RightPanel                   matlab.ui.container.Panel
+        x11result                    matlab.ui.control.EditField
+        x12result                    matlab.ui.control.EditField
+        y_result                     matlab.ui.control.EditField
+        x1Label_2                    matlab.ui.control.Label
+        x2Label_2                    matlab.ui.control.Label
+        yfx1x2Label                  matlab.ui.control.Label
+        Label_5                      matlab.ui.control.Label
+        Label_6                      matlab.ui.control.Label
+        Label_7                      matlab.ui.control.Label
+        Label_8                      matlab.ui.control.Label
+        x21result                    matlab.ui.control.EditField
+        x22result                    matlab.ui.control.EditField
+        y2_result                    matlab.ui.control.EditField
+        x31result                    matlab.ui.control.EditField
+        x32result                    matlab.ui.control.EditField
+        y3_result                    matlab.ui.control.EditField
+        x41result                    matlab.ui.control.EditField
+        x42result                    matlab.ui.control.EditField
+        y4_result                    matlab.ui.control.EditField
+        FinalresultsLabel            matlab.ui.control.Label
+        MyUIAxes                     matlab.ui.control.UIAxes
+    end
+
+    % Properties that correspond to apps with auto-reflow
+    properties (Access = private)
+        onePanelWidth = 576;
+    end
+
+    
+    properties (Access = public)
+        x1result;
+        x2result;
+        x3result;
+        x4result;
+        y1result;
+        y2result;
+        y3result;
+        y4result;
+        lim_x = zeros(1,2);
+    end
+    methods (Access = public)
+        
+        function [y] = rastrigin(~, x, A)
+            y = zeros(1, size(x,1));
+            for r_i = 1:size(x,1)
+               x_row = x(r_i, :);
+               d = length(x_row);
+               sq = x_row.^2;
+               y(r_i) = A*d + sum(sq - A*cos(2*pi*x_row));
+            end
+        end
+        
+        function [y] = schwefel(~, x)
+            d = length(x);
+            sum = 0;
+            for ii = 1:d
+                xi = x(ii);
+                sum = sum + xi*sin(sqrt(abs(xi)));
+            end
+            y = 418.9829*d - sum;
+        end
+        
+        function [y] = sphere(~, x)
+            d = length(x);
+            y = 0;
+            for ii = 1:d
+                xi = x(ii);
+                y = y + xi^2;
+            end
+        end
+        
+        function [x_history, y_history] = searchingProcess(app, inputX, fx)
+
+            rand_interval = @(a,b) a + (b-a).*rand();
+            
+            % lim_x(1) / lim_x(2)=> 1, 2 => indexovani od jednicky, because matlab
+            x = inputX;
+            if x(1) < app.lim_x(1)
+                x(1) = app.lim_x(1);
+            elseif x(1) > app.lim_x(2)
+                x(1) = app.lim_x(2);
+            end
+            
+            if x(2) > app.lim_x(2)
+                x(2) = app.lim_x(2);
+            elseif x(2) < app.lim_x(1)
+                x(2) = app.lim_x(1);
+            end
+            
+            n_iter = round(str2num(app.NumOfIterations.Value));
+            x_history = [x];
+            y = fx(x);
+            y_history = [y];
+            
+            %rmax = max krok
+            rmax = app.Prumer.Value;
+            for iter = 1:n_iter
+                % ctverec
+                if app.tverecButton.Value == true
+                    r = [rand_interval(-rmax/2, rmax/2), rand_interval(-rmax/2, rmax/2)];
+                % kruh
+                elseif app.KruhButton.Value == true
+                    % polomer - normal distribution
+                    x_min=0;
+                    xmax=rmax/2;
+                    polomer = x_min+randn()*(xmax-x_min);
+                    % normal distribution can jump out of interval
+                    if polomer > rmax
+                        polomer = rmax
+                    elseif polomer < rmax
+                        polomer = rmax
+                    end
+                    uhel = rand_interval(0, 2*pi);
+                    r = [polomer*cos(uhel), polomer*sin(uhel)];
+                end
+                
+                % if the random step is better then current position, step,
+                % else stay at current position
+                % alternative => look around in surroundings (for example 50 rand. coordinates),
+                % choose a minimum and make a step => is it faster?
+                % is it worth it for this kind of basic task? doesnt it
+                % slow down the process?
+                if fx(x + r) < fx(x)
+                    xt = x + r;
+                    % logicke indexovani ->if x < limx, pak x = limx
+                    xt(xt<app.lim_x(1)) = app.lim_x(1);
+                    xt(xt>app.lim_x(2)) = app.lim_x(2);
+                    yt = fx(xt);
+                    y = yt; x = xt;
+                    x_history = [x_history; x];
+                    y_history = [y_history; y];
+                else
+                    continue
+                end
+            end
+        end
+    end
+
+    % Callbacks that handle component events
+    methods (Access = private)
+
+        % Button pushed function: RunButton
+        function RunButtonPushed(app, event)
+            if app.fxxi2Button.Value == true
+                fx = @(x) sphere(app, x);
+            elseif app.fxAdxi2Acos2pixiButton.Value == true
+                fx = @(x) rastrigin(app, x, 10);
+            elseif app.fx418929dxisinxi05Button.Value == true
+                fx = @(x) schwefel(app, x);
+            end
+                        
+            % constraints x1, x2 by user
+            app.lim_x(1) = str2num(app.GetMinX.Value);
+            app.lim_x(2) = str2num(app.GetMaxX.Value);
+            
+            % calling fx for x & y, common constraint min a max (limx limx)
+            f = @(x,y) fx([x,y]);
+            fcontour(app.MyUIAxes, f)
+            hold(app.MyUIAxes,'on')
+            
+            title(app.MyUIAxes, 'Graph');
+            xlim(app.MyUIAxes, [app.lim_x(1) app.lim_x(2)]);
+            ylim(app.MyUIAxes, [app.lim_x(1) app.lim_x(2)]);
+            
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+            if (~isempty(app.x1StartPoint1.Value) || ~isempty(app.x2StartPoint1.Value))
+                x1 = [str2num(app.x1StartPoint1.Value), str2num(app.x2StartPoint1.Value)];
+                [app.x1result, app.y1result] = searchingProcess(app, x1, fx);
+                plot(app.MyUIAxes, app.x1result(:,1), app.x1result(:,2), 'r-');
+                [y_min, y_min_idx] = min(app.y1result);
+
+                % Minimum plot does not work
+                plot(app.MyUIAxes, app.x1result(y_min_idx,1), app.x1result(y_min_idx,2), 'g*');
+                % Create a table with the data and variable names
+                T = table(app.x1result, app.y1result, 'VariableNames', {'X', 'F(X_1, X_2)'});
+                % Write data to text file
+                writetable(T, 'MyFile1.txt');
+
+                % Write out the result
+                app.x11result.Value = num2str(app.x1result(end,1));
+                app.x12result.Value = num2str(app.x1result(end,2));
+                app.y_result.Value = num2str(app.y1result(end));
+            end
+            
+            if (~isempty(app.x1StartPoint2.Value) || ~isempty(app.x2StartPoint2.Value))
+                x2 = [str2num(app.x1StartPoint2.Value), str2num(app.x2StartPoint2.Value)];
+                [app.x2result, app.y2result] = searchingProcess(app, x2, fx);
+                plot(app.MyUIAxes, app.x2result(:,1), app.x2result(:,2), 'b-');
+                [y_min, y_min_idx] = min(app.y2result);
+
+                % Minimum
+                plot(app.MyUIAxes, app.x2result(y_min_idx,1), app.x2result(y_min_idx,2), 'g*');
+                % Create a table with the data and variable names
+                T = table(app.x2result, app.y2result, 'VariableNames', {'X', 'F(X_1, X_2)'});
+                % Write data to text file
+                writetable(T, 'MyFile2.txt');
+
+                % Write out the result
+                app.x21result.Value = num2str(app.x2result(end,1));
+                app.x22result.Value = num2str(app.x2result(end,2));
+                app.y2_result.Value = num2str(app.y2result(end));
+            end
+            
+            if (~isempty(app.x1StartPoint3.Value) || ~isempty(app.x2StartPoint3.Value))
+                x3 = [str2num(app.x1StartPoint3.Value), str2num(app.x2StartPoint3.Value)];
+                [app.x3result, app.y3result] = searchingProcess(app, x3, fx);
+                plot(app.MyUIAxes, app.x3result(:,1), app.x3result(:,2), 'y-');
+                [y_min, y_min_idx] = min(app.y3result);
+
+                % Minimum
+                plot(app.MyUIAxes, app.x3result(y_min_idx,1), app.x3result(y_min_idx,2), 'g*');
+                % Create a table with the data and variable names
+                T = table(app.x3result, app.y3result, 'VariableNames', {'X', 'F(X_1, X_2)'});
+                % Write data to text file
+                writetable(T, 'MyFile3.txt');
+
+                % Write out the result
+                app.x31result.Value = num2str(app.x3result(end,1));
+                app.x32result.Value = num2str(app.x3result(end,2));
+                app.y3_result.Value = num2str(app.y3result(end));
+            end
+            
+            if (~isempty(app.x1StartPoint4.Value) || ~isempty(app.x2StartPoint4.Value))
+                x4 = [str2num(app.x1StartPoint4.Value), str2num(app.x2StartPoint4.Value)];
+                [app.x4result, app.y4result] = searchingProcess(app, x4, fx);
+                plot(app.MyUIAxes, app.x4result(:,1), app.x4result(:,2), 'm-');
+                [y_min, y_min_idx] = min(app.y4result);
+
+                % Minimum
+                plot(app.MyUIAxes, app.x4result(y_min_idx,1), app.x4result(y_min_idx,2), 'g*');
+                % Create a table with the data and variable names
+                T = table(app.x4result, app.y4result, 'VariableNames', {'X', 'F(X_1, X_2)'});
+                % Write data to text file
+                writetable(T, 'MyFile4.txt');
+
+                % Write out the result
+                app.x41result.Value = num2str(app.x4result(end,1));
+                app.x42result.Value = num2str(app.x4result(end,2));
+                app.y4_result.Value = num2str(app.y4result(end));
+            end
+
+            hold(app.MyUIAxes,'off')
+
+        end
+
+        % Changes arrangement of the app based on UIFigure width
+        function updateAppLayout(app, event)
+            currentFigureWidth = app.UIFigure.Position(3);
+            if(currentFigureWidth <= app.onePanelWidth)
+                % Change to a 2x1 grid
+                app.GridLayout.RowHeight = {527, 527};
+                app.GridLayout.ColumnWidth = {'1x'};
+                app.RightPanel.Layout.Row = 2;
+                app.RightPanel.Layout.Column = 1;
+            else
+                % Change to a 1x2 grid
+                app.GridLayout.RowHeight = {'1x'};
+                app.GridLayout.ColumnWidth = {316, '1x'};
+                app.RightPanel.Layout.Row = 1;
+                app.RightPanel.Layout.Column = 2;
+            end
+        end
+    end
+
+    % Component initialization
+    methods (Access = private)
+
+        % Create UIFigure and components
+        function createComponents(app)
+
+            % Create UIFigure and hide until all components are created
+            app.UIFigure = uifigure('Visible', 'off');
+            app.UIFigure.AutoResizeChildren = 'off';
+            app.UIFigure.Position = [100 100 781 527];
+            app.UIFigure.Name = 'UI Figure';
+            app.UIFigure.SizeChangedFcn = createCallbackFcn(app, @updateAppLayout, true);
+
+            % Create GridLayout
+            app.GridLayout = uigridlayout(app.UIFigure);
+            app.GridLayout.ColumnWidth = {316, '1x'};
+            app.GridLayout.RowHeight = {'1x'};
+            app.GridLayout.ColumnSpacing = 0;
+            app.GridLayout.RowSpacing = 0;
+            app.GridLayout.Padding = [0 0 0 0];
+            app.GridLayout.Scrollable = 'on';
+
+            % Create LeftPanel
+            app.LeftPanel = uipanel(app.GridLayout);
+            app.LeftPanel.SizeChangedFcn = createCallbackFcn(app, @updateAppLayout, true);
+            app.LeftPanel.Layout.Row = 1;
+            app.LeftPanel.Layout.Column = 1;
+
+            % Create RunButton
+            app.RunButton = uibutton(app.LeftPanel, 'push');
+            app.RunButton.ButtonPushedFcn = createCallbackFcn(app, @RunButtonPushed, true);
+            app.RunButton.Position = [104 13 122 32];
+            app.RunButton.Text = 'Run';
+
+            % Create VolbaelovfunkceButtonGroup
+            app.VolbaelovfunkceButtonGroup = uibuttongroup(app.LeftPanel);
+            app.VolbaelovfunkceButtonGroup.Title = 'Volba účelové funkce';
+            app.VolbaelovfunkceButtonGroup.Position = [47 421 222 89];
+
+            % Create fxxi2Button
+            app.fxxi2Button = uiradiobutton(app.VolbaelovfunkceButtonGroup);
+            app.fxxi2Button.Text = 'f(x) = Σ xi^2';
+            app.fxxi2Button.Position = [11 43 85 22];
+            app.fxxi2Button.Value = true;
+
+            % Create fxAdxi2Acos2pixiButton
+            app.fxAdxi2Acos2pixiButton = uiradiobutton(app.VolbaelovfunkceButtonGroup);
+            app.fxAdxi2Acos2pixiButton.Text = 'f(x) = A*d + Σ(xi^2 - A*cos(2*pi*xi))';
+            app.fxAdxi2Acos2pixiButton.Position = [11 21 208 22];
+
+            % Create fx418929dxisinxi05Button
+            app.fx418929dxisinxi05Button = uiradiobutton(app.VolbaelovfunkceButtonGroup);
+            app.fx418929dxisinxi05Button.Text = 'f(x) = 418.929*d - Σxi*sin(|xi|^0.5)';
+            app.fx418929dxisinxi05Button.Position = [11 -1 200 22];
+
+            % Create Omezenprox1x2EditFieldLabel
+            app.Omezenprox1x2EditFieldLabel = uilabel(app.LeftPanel);
+            app.Omezenprox1x2EditFieldLabel.HorizontalAlignment = 'right';
+            app.Omezenprox1x2EditFieldLabel.Position = [1 329 110 22];
+            app.Omezenprox1x2EditFieldLabel.Text = 'Omezení pro x1, x2';
+
+            % Create GetMinX
+            app.GetMinX = uieditfield(app.LeftPanel, 'text');
+            app.GetMinX.Position = [120 330 68 22];
+            app.GetMinX.Value = '-5.12';
+
+            % Create GetMaxX
+            app.GetMaxX = uieditfield(app.LeftPanel, 'text');
+            app.GetMaxX.Position = [207 330 68 22];
+            app.GetMaxX.Value = '5.12';
+
+            % Create minLabel
+            app.minLabel = uilabel(app.LeftPanel);
+            app.minLabel.Position = [141 357 25 22];
+            app.minLabel.Text = 'min';
+
+            % Create maxLabel
+            app.maxLabel = uilabel(app.LeftPanel);
+            app.maxLabel.Position = [233 357 28 22];
+            app.maxLabel.Text = 'max';
+
+            % Create HodnotyprvniteracestartingpointLabel
+            app.HodnotyprvniteracestartingpointLabel = uilabel(app.LeftPanel);
+            app.HodnotyprvniteracestartingpointLabel.Position = [6 275 123 34];
+            app.HodnotyprvniteracestartingpointLabel.Text = {'Hodnoty první iterace:'; '    (starting point)'};
+
+            % Create ProhledvanokolLabel
+            app.ProhledvanokolLabel = uilabel(app.LeftPanel);
+            app.ProhledvanokolLabel.Position = [6 99 111 22];
+            app.ProhledvanokolLabel.Text = 'Prohledávané okolí:';
+
+            % Create x1StartPoint1
+            app.x1StartPoint1 = uieditfield(app.LeftPanel, 'text');
+            app.x1StartPoint1.Position = [145 281 44 22];
+            app.x1StartPoint1.Value = '4';
+
+            % Create x2StartPoint1
+            app.x2StartPoint1 = uieditfield(app.LeftPanel, 'text');
+            app.x2StartPoint1.Position = [225 281 41 22];
+            app.x2StartPoint1.Value = '4';
+
+            % Create VolbaButtonGroup
+            app.VolbaButtonGroup = uibuttongroup(app.LeftPanel);
+            app.VolbaButtonGroup.Title = 'Volba';
+            app.VolbaButtonGroup.Position = [120 62 100 84];
+
+            % Create KruhButton
+            app.KruhButton = uiradiobutton(app.VolbaButtonGroup);
+            app.KruhButton.Text = 'Kruh';
+            app.KruhButton.Position = [11 38 58 22];
+            app.KruhButton.Value = true;
+
+            % Create tverecButton
+            app.tverecButton = uiradiobutton(app.VolbaButtonGroup);
+            app.tverecButton.Text = 'Čtverec';
+            app.tverecButton.Position = [11 16 65 22];
+
+            % Create Prumer
+            app.Prumer = uieditfield(app.LeftPanel, 'numeric');
+            app.Prumer.Position = [236 85 67 22];
+            app.Prumer.Value = 8;
+
+            % Create MaxprmrdlkastranyLabel
+            app.MaxprmrdlkastranyLabel = uilabel(app.LeftPanel);
+            app.MaxprmrdlkastranyLabel.Position = [236 119 76 27];
+            app.MaxprmrdlkastranyLabel.Text = {'Max. průměr/'; 'délka strany'};
+
+            % Create PocetIteracLabel
+            app.PocetIteracLabel = uilabel(app.LeftPanel);
+            app.PocetIteracLabel.HorizontalAlignment = 'center';
+            app.PocetIteracLabel.Position = [7 381 76 22];
+            app.PocetIteracLabel.Text = 'Pocet Iterací:';
+
+            % Create NumOfIterations
+            app.NumOfIterations = uieditfield(app.LeftPanel, 'text');
+            app.NumOfIterations.Position = [121 381 68 22];
+            app.NumOfIterations.Value = '200';
+
+            % Create x1Label
+            app.x1Label = uilabel(app.LeftPanel);
+            app.x1Label.Position = [155 302 25 22];
+            app.x1Label.Text = 'x1';
+
+            % Create x2Label
+            app.x2Label = uilabel(app.LeftPanel);
+            app.x2Label.Position = [234 302 25 22];
+            app.x2Label.Text = 'x2';
+
+            % Create x1StartPoint2
+            app.x1StartPoint2 = uieditfield(app.LeftPanel, 'text');
+            app.x1StartPoint2.Position = [145 241 44 23];
+            app.x1StartPoint2.Value = '-3';
+
+            % Create x1StartPoint3
+            app.x1StartPoint3 = uieditfield(app.LeftPanel, 'text');
+            app.x1StartPoint3.Position = [145 203 44 24];
+            app.x1StartPoint3.Value = '-5';
+
+            % Create x2StartPoint2
+            app.x2StartPoint2 = uieditfield(app.LeftPanel, 'text');
+            app.x2StartPoint2.Position = [225 241 41 22];
+            app.x2StartPoint2.Value = '-4.5';
+
+            % Create x2StartPoint3
+            app.x2StartPoint3 = uieditfield(app.LeftPanel, 'text');
+            app.x2StartPoint3.Position = [225 203 42 24];
+            app.x2StartPoint3.Value = '4';
+
+            % Create x1StartPoint4
+            app.x1StartPoint4 = uieditfield(app.LeftPanel, 'text');
+            app.x1StartPoint4.Position = [145 167 44 24];
+
+            % Create x2StartPoint4
+            app.x2StartPoint4 = uieditfield(app.LeftPanel, 'text');
+            app.x2StartPoint4.Position = [225 167 42 24];
+
+            % Create Label
+            app.Label = uilabel(app.LeftPanel);
+            app.Label.Position = [127 283 10 19];
+            app.Label.Text = '1)';
+
+            % Create Label_2
+            app.Label_2 = uilabel(app.LeftPanel);
+            app.Label_2.Position = [128 242 10 22];
+            app.Label_2.Text = '2)';
+
+            % Create Label_3
+            app.Label_3 = uilabel(app.LeftPanel);
+            app.Label_3.Position = [128 203 10 22];
+            app.Label_3.Text = '3)';
+
+            % Create Label_4
+            app.Label_4 = uilabel(app.LeftPanel);
+            app.Label_4.Position = [128 167 10 22];
+            app.Label_4.Text = '4)';
+
+            % Create redLabel
+            app.redLabel = uilabel(app.LeftPanel);
+            app.redLabel.Position = [274 281 31 22];
+            app.redLabel.Text = '(red)';
+
+            % Create blueLabel
+            app.blueLabel = uilabel(app.LeftPanel);
+            app.blueLabel.Position = [274 243 36 22];
+            app.blueLabel.Text = '(blue)';
+
+            % Create yellowLabel
+            app.yellowLabel = uilabel(app.LeftPanel);
+            app.yellowLabel.Position = [268 204 47 22];
+            app.yellowLabel.Text = '(yellow)';
+
+            % Create purpleLabel
+            app.purpleLabel = uilabel(app.LeftPanel);
+            app.purpleLabel.Position = [268 168 47 22];
+            app.purpleLabel.Text = '(purple)';
+
+            % Create RightPanel
+            app.RightPanel = uipanel(app.GridLayout);
+            app.RightPanel.Layout.Row = 1;
+            app.RightPanel.Layout.Column = 2;
+
+            % Create x11result
+            app.x11result = uieditfield(app.RightPanel, 'text');
+            app.x11result.Position = [92 145 89 26];
+
+            % Create x12result
+            app.x12result = uieditfield(app.RightPanel, 'text');
+            app.x12result.Position = [208 145 89 26];
+
+            % Create y_result
+            app.y_result = uieditfield(app.RightPanel, 'text');
+            app.y_result.Position = [342 145 89 26];
+
+            % Create x1Label_2
+            app.x1Label_2 = uilabel(app.RightPanel);
+            app.x1Label_2.Position = [125 175 25 22];
+            app.x1Label_2.Text = 'x1';
+
+            % Create x2Label_2
+            app.x2Label_2 = uilabel(app.RightPanel);
+            app.x2Label_2.Position = [241 175 25 22];
+            app.x2Label_2.Text = 'x2';
+
+            % Create yfx1x2Label
+            app.yfx1x2Label = uilabel(app.RightPanel);
+            app.yfx1x2Label.Position = [360 175 65 22];
+            app.yfx1x2Label.Text = 'y = f(x1,x2)';
+
+            % Create Label_5
+            app.Label_5 = uilabel(app.RightPanel);
+            app.Label_5.Position = [71 148 10 19];
+            app.Label_5.Text = '1)';
+
+            % Create Label_6
+            app.Label_6 = uilabel(app.RightPanel);
+            app.Label_6.Position = [72 107 10 22];
+            app.Label_6.Text = '2)';
+
+            % Create Label_7
+            app.Label_7 = uilabel(app.RightPanel);
+            app.Label_7.Position = [72 68 10 22];
+            app.Label_7.Text = '3)';
+
+            % Create Label_8
+            app.Label_8 = uilabel(app.RightPanel);
+            app.Label_8.Position = [72 32 10 22];
+            app.Label_8.Text = '4)';
+
+            % Create x21result
+            app.x21result = uieditfield(app.RightPanel, 'text');
+            app.x21result.Position = [93 105 89 26];
+
+            % Create x22result
+            app.x22result = uieditfield(app.RightPanel, 'text');
+            app.x22result.Position = [209 105 89 26];
+
+            % Create y2_result
+            app.y2_result = uieditfield(app.RightPanel, 'text');
+            app.y2_result.Position = [343 105 89 26];
+
+            % Create x31result
+            app.x31result = uieditfield(app.RightPanel, 'text');
+            app.x31result.Position = [92 66 89 26];
+
+            % Create x32result
+            app.x32result = uieditfield(app.RightPanel, 'text');
+            app.x32result.Position = [208 66 89 26];
+
+            % Create y3_result
+            app.y3_result = uieditfield(app.RightPanel, 'text');
+            app.y3_result.Position = [342 66 89 26];
+
+            % Create x41result
+            app.x41result = uieditfield(app.RightPanel, 'text');
+            app.x41result.Position = [92 30 89 26];
+
+            % Create x42result
+            app.x42result = uieditfield(app.RightPanel, 'text');
+            app.x42result.Position = [208 30 89 26];
+
+            % Create y4_result
+            app.y4_result = uieditfield(app.RightPanel, 'text');
+            app.y4_result.Position = [342 30 89 26];
+
+            % Create FinalresultsLabel
+            app.FinalresultsLabel = uilabel(app.RightPanel);
+            app.FinalresultsLabel.FontSize = 16;
+            app.FinalresultsLabel.Position = [11 186 96 22];
+            app.FinalresultsLabel.Text = 'Final results:';
+
+            % Create MyUIAxes
+            app.MyUIAxes = uiaxes(app.RightPanel);
+            title(app.MyUIAxes, 'Graph')
+            xlabel(app.MyUIAxes, 'x1')
+            ylabel(app.MyUIAxes, 'x2')
+            app.MyUIAxes.Position = [7 214 444 301];
+
+            % Show the figure after all components are created
+            app.UIFigure.Visible = 'on';
+        end
+    end
+
+    % App creation and deletion
+    methods (Access = public)
+
+        % Construct app
+        function app = Kadlec_VSC_Task_1
+
+            % Create UIFigure and components
+            createComponents(app)
+
+            % Register the app with App Designer
+            registerApp(app, app.UIFigure)
+
+            if nargout == 0
+                clear app
+            end
+        end
+
+        % Code that executes before app deletion
+        function delete(app)
+
+            % Delete UIFigure when app is deleted
+            delete(app.UIFigure)
+        end
+    end
+end

@@ -1,0 +1,387 @@
+classdef Kadlec_VSC_Task_3 < matlab.apps.AppBase
+
+    % Properties that correspond to app components
+    properties (Access = public)
+        K_means_clustering              matlab.ui.Figure
+        GridLayout                      matlab.ui.container.GridLayout
+        LeftPanel                       matlab.ui.container.Panel
+        InputfileEditFieldLabel         matlab.ui.control.Label
+        InputfileEditField              matlab.ui.control.EditField
+        NumberofClustersEditFieldLabel  matlab.ui.control.Label
+        NumberofClustersEditField       matlab.ui.control.NumericEditField
+        MetricButtonGroup               matlab.ui.container.ButtonGroup
+        xicj2Button                     matlab.ui.control.RadioButton
+        sqrtxicj2Button                 matlab.ui.control.RadioButton
+        xicjButton                      matlab.ui.control.RadioButton
+        KMeansButton                    matlab.ui.control.Button
+        NumberofIterationsLabel         matlab.ui.control.Label
+        NumberofIterationsEditField     matlab.ui.control.NumericEditField
+        FlowoftheprogramButtonGroup     matlab.ui.container.ButtonGroup
+        StepbystepButton                matlab.ui.control.RadioButton
+        AllAtOncePrettyPrintButton      matlab.ui.control.RadioButton
+        KmeansclusteringsetupLabel      matlab.ui.control.Label
+        CentroidsButtonGroup            matlab.ui.container.ButtonGroup
+        GenerateautomaticallyButton     matlab.ui.control.RadioButton
+        InputmanuallyButton             matlab.ui.control.RadioButton
+        Ifemptyprogramwillgenerage100randomdatapointsLabel  matlab.ui.control.Label
+        RightPanel                      matlab.ui.container.Panel
+        MyUIAxes                        matlab.ui.control.UIAxes
+    end
+
+    % Properties that correspond to apps with auto-reflow
+    properties (Access = private)
+        onePanelWidth = 576;
+    end
+
+    
+    properties (Access = private)
+        numOfClusters;
+        numOfIterations;
+    end
+    
+    % Functions representing metrics of distance of centroids and
+    % datapoints
+    methods (Access = private)
+        
+        function res = sumQuad(~, rx, ry, initCentrX, initCentrY)
+            res = (rx-initCentrX)^2 + (ry-initCentrY)^2;
+        end
+        
+        function res = sqrtSumQuad(~, rx, ry, initCentrX, initCentrY)
+            res = sqrt((rx-initCentrX)^2 + (ry-initCentrY)^2);
+        end
+        
+        function res = sum(~, rx, ry, initCentrX, initCentrY)
+            res = abs(rx-initCentrX) + abs(ry-initCentrY);
+        end
+    end
+    
+
+    % Callbacks that handle component events
+    methods (Access = private)
+
+        % Button pushed function: KMeansButton
+        function KMeansButtonPushed(app, event)
+            %% Inputs
+            app.numOfClusters=app.NumberofClustersEditField.Value; % Number of clusters
+            app.numOfIterations=app.NumberofIterationsEditField.Value; % Number of iterations
+            
+            % choice of metric of distance
+            if app.xicj2Button.Value == true
+                distanceFunc = @(x, y, v, u) sumQuad(app, x, y, v, u);
+            elseif app.sqrtxicj2Button.Value == true
+                distanceFunc = @(x, y, v, u) sqrtSumQuad(app, x, y, v, u);
+            elseif app.xicjButton.Value == true
+                distanceFunc = @(x, y, v, u) sum(app, x, y, v, u);
+            end
+            
+            % If field is empty, generate random data points
+            if  isempty(app.InputfileEditField.Value)
+                n=100; % number of samples or points
+                rx=10*rand(n,1); % vector of random data coord x
+                ry=10*rand(n,1); % vector of random data coord y
+            
+            % If field is not empty, read data from file
+            else
+                dataFromFile = importdata(app.InputfileEditField.Value);
+                rx = dataFromFile(:,1);
+                ry = dataFromFile(:,2);
+                n = numel(rx);
+            end            
+            
+            % Generating OR inputting initial coordinates of centroids
+            if app.GenerateautomaticallyButton.Value == true
+                % Initial values of the centroids automatically generated
+                initialCentroidsX=rx( ceil(rand(app.numOfClusters,1)*size(rx,1)) ,:); % initial cluster centers (x)
+                initialCentroidsY=ry( ceil(rand(app.numOfClusters,1)*size(ry,1)) ,:); % initial cluster centers (y)
+            else
+                initialCentroidsXtemp={};
+                initialCentroidsYtemp={};
+                for i = 1:app.numOfClusters
+                    coords = inputdlg({'Centroid Coordinate x1','Centroid Coordinate x2'}, 'Coordinates of Centroids');
+                    initialCentroidsXtemp = [initialCentroidsXtemp; str2double(coords{1})];
+                    initialCentroidsYtemp = [initialCentroidsYtemp; str2double(coords{2})];
+                end
+                initialCentroidsX = cell2mat(initialCentroidsXtemp);
+                initialCentroidsY = cell2mat(initialCentroidsYtemp);
+            end
+            
+            % if step by step is chosen, graph in app shows initial state
+            % of centroids and dataset (clustering process is shown on pop-up graph)
+            if app.StepbystepButton.Value == true
+                app.MyUIAxes.Title.String = "Beggining state";
+            end
+            
+            if app.StepbystepButton.Value == false
+                app.MyUIAxes.Title.String = "Clustering state";
+            end
+            
+            % Clustering proccess
+            for z=1:app.numOfIterations
+                for i=1:n
+                    for j=1:app.numOfClusters
+                        if z==1
+                            tempDistance(i,j)=distanceFunc(rx(i),ry(i), initialCentroidsX(j), initialCentroidsY(j));
+                        else
+                            tempDistance(i,j)=distanceFunc(rx(i),ry(i), centroidsX(j), centroidsY(j));
+                        end
+                    end
+                    [mintempDistance, C] = min(tempDistance(i,1:app.numOfClusters));
+                    distance(z,i) = mintempDistance; clusters(z,i) = C;
+                end
+                % Recompute the clusters center
+                for q=1:app.numOfClusters
+                    clusterPointsPos=(clusters(z,:)==q); % Position of the points of certain cluster
+                    clusterPoints(q,:)=clusterPointsPos; % Points of the cluster
+                    centroidsX(q,:)=mean(rx(clusterPointsPos)); % New cluster centers in x
+                    centroidsY(q,:)=mean(ry(clusterPointsPos)); % New cluster centers in y
+                end
+                
+                % Save the data of z-th iteration
+                allCentroidsX(z,:)=centroidsX; % center of the cluster at each iteration in x
+                allCentroidsY(z,:)=centroidsY; % center of the cluster at each iteration in y
+                allClusterPoints(z,:,:)=clusterPoints; % points of the cluster at each iteration
+                
+                % Print-step-bystep
+                if app.StepbystepButton.Value == true
+                    CV= 'o*+s^v.db+c+m+k+yorobocomokoysrsbscsmsksy'; % Color Vector
+                    %f = figure;
+                    if z==1
+                        plot(app.MyUIAxes, rx,ry,'o','LineWidth',1.5); hold(app.MyUIAxes,'on'); plot(app.MyUIAxes, initialCentroidsX,initialCentroidsY,'*k','LineWidth',6.5);
+                        hold(app.MyUIAxes,'off')
+                    else
+                        for i=1:app.numOfClusters
+                            plot(rx(allClusterPoints(z-1,i,:)),ry(allClusterPoints(z-1,i,:)),CV(i),'LineWidth',2); % Plot points with determined color and shape
+                            hold on
+                        end
+                        plot(allCentroidsX(z-1,:),allCentroidsY(z-1,:),'*k','LineWidth',6); hold off
+                    end
+                    if z ~= app.numOfIterations
+                        msgfig = msgbox('Step?','Step succeeded','modal');
+                    else
+                        msgfig = msgbox('Last step performed, close app?','Last step succeded','modal');
+                    end
+                    uiwait(msgfig)
+                    close all
+                end
+            end
+            
+                % Pretty plot
+                if app.AllAtOncePrettyPrintButton.Value == true
+                CV= 'o*+s^v.db+c+m+k+yorobocomokoysrsbscsmsksy'; % Color Vector
+                for z=1:app.numOfIterations+1
+                    %figure (1)
+                    if z==1
+                        plot(app.MyUIAxes, rx,ry,'o','LineWidth',1.5); hold(app.MyUIAxes,'on'); plot(app.MyUIAxes, initialCentroidsX,initialCentroidsY,'*k','LineWidth',6.5);
+                        hold(app.MyUIAxes,'off')
+                    else
+                        for i=1:app.numOfClusters
+                            plot(app.MyUIAxes, rx(allClusterPoints(z-1,i,:)),ry(allClusterPoints(z-1,i,:)),CV(i),'LineWidth',2); % Plot points with determined color and shape
+                            hold(app.MyUIAxes,'on')
+                        end
+                        plot(app.MyUIAxes, allCentroidsX(z-1,:),allCentroidsY(z-1,:),'*k','LineWidth',6); hold(app.MyUIAxes,'off')
+                    end
+                    grid(app.MyUIAxes,'on')
+                    pause(0.7);
+                end
+            end
+            % Create a table with the data and variable names
+            col1 = reshape(allCentroidsX(end,:),app.numOfClusters,1);
+            col2 = reshape(allCentroidsY(end,:),app.numOfClusters,1);
+            T = table(col1, col2, 'VariableNames', {'centroidCoordX', 'centroidCoordY'});
+            % Write data to text file
+            writetable(T, 'CentroidsCoodrinates.txt');
+        end
+
+        % Changes arrangement of the app based on UIFigure width
+        function updateAppLayout(app, event)
+            currentFigureWidth = app.K_means_clustering.Position(3);
+            if(currentFigureWidth <= app.onePanelWidth)
+                % Change to a 2x1 grid
+                app.GridLayout.RowHeight = {381, 381};
+                app.GridLayout.ColumnWidth = {'1x'};
+                app.RightPanel.Layout.Row = 2;
+                app.RightPanel.Layout.Column = 1;
+            else
+                % Change to a 1x2 grid
+                app.GridLayout.RowHeight = {'1x'};
+                app.GridLayout.ColumnWidth = {332, '1x'};
+                app.RightPanel.Layout.Row = 1;
+                app.RightPanel.Layout.Column = 2;
+            end
+        end
+    end
+
+    % Component initialization
+    methods (Access = private)
+
+        % Create UIFigure and components
+        function createComponents(app)
+
+            % Create K_means_clustering and hide until all components are created
+            app.K_means_clustering = uifigure('Visible', 'off');
+            app.K_means_clustering.AutoResizeChildren = 'off';
+            app.K_means_clustering.Position = [100 100 809 381];
+            app.K_means_clustering.Name = 'K-means clustering';
+            app.K_means_clustering.SizeChangedFcn = createCallbackFcn(app, @updateAppLayout, true);
+
+            % Create GridLayout
+            app.GridLayout = uigridlayout(app.K_means_clustering);
+            app.GridLayout.ColumnWidth = {332, '1x'};
+            app.GridLayout.RowHeight = {'1x'};
+            app.GridLayout.ColumnSpacing = 0;
+            app.GridLayout.RowSpacing = 0;
+            app.GridLayout.Padding = [0 0 0 0];
+            app.GridLayout.Scrollable = 'on';
+
+            % Create LeftPanel
+            app.LeftPanel = uipanel(app.GridLayout);
+            app.LeftPanel.Layout.Row = 1;
+            app.LeftPanel.Layout.Column = 1;
+
+            % Create InputfileEditFieldLabel
+            app.InputfileEditFieldLabel = uilabel(app.LeftPanel);
+            app.InputfileEditFieldLabel.HorizontalAlignment = 'right';
+            app.InputfileEditFieldLabel.Position = [37 317 54 22];
+            app.InputfileEditFieldLabel.Text = 'Input file:';
+
+            % Create InputfileEditField
+            app.InputfileEditField = uieditfield(app.LeftPanel, 'text');
+            app.InputfileEditField.Position = [106 317 100 22];
+            app.InputfileEditField.Value = 'dataSample.txt';
+
+            % Create NumberofClustersEditFieldLabel
+            app.NumberofClustersEditFieldLabel = uilabel(app.LeftPanel);
+            app.NumberofClustersEditFieldLabel.HorizontalAlignment = 'right';
+            app.NumberofClustersEditFieldLabel.Position = [34 259 112 22];
+            app.NumberofClustersEditFieldLabel.Text = 'Number of Clusters:';
+
+            % Create NumberofClustersEditField
+            app.NumberofClustersEditField = uieditfield(app.LeftPanel, 'numeric');
+            app.NumberofClustersEditField.Position = [158 259 51 22];
+            app.NumberofClustersEditField.Value = 4;
+
+            % Create MetricButtonGroup
+            app.MetricButtonGroup = uibuttongroup(app.LeftPanel);
+            app.MetricButtonGroup.Title = 'Metric';
+            app.MetricButtonGroup.Position = [12 49 149 106];
+
+            % Create xicj2Button
+            app.xicj2Button = uiradiobutton(app.MetricButtonGroup);
+            app.xicj2Button.Text = 'Σ(x(i)-c(j))^2';
+            app.xicj2Button.Position = [11 60 87 22];
+            app.xicj2Button.Value = true;
+
+            % Create sqrtxicj2Button
+            app.sqrtxicj2Button = uiradiobutton(app.MetricButtonGroup);
+            app.sqrtxicj2Button.Text = 'Σsqrt(x(i)-c(j))^2';
+            app.sqrtxicj2Button.Position = [11 38 107 22];
+
+            % Create xicjButton
+            app.xicjButton = uiradiobutton(app.MetricButtonGroup);
+            app.xicjButton.Text = 'Σ(|x(i)-c(j)|)';
+            app.xicjButton.Position = [11 16 81 22];
+
+            % Create KMeansButton
+            app.KMeansButton = uibutton(app.LeftPanel, 'push');
+            app.KMeansButton.ButtonPushedFcn = createCallbackFcn(app, @KMeansButtonPushed, true);
+            app.KMeansButton.Position = [116 12 100 22];
+            app.KMeansButton.Text = 'K-Means';
+
+            % Create NumberofIterationsLabel
+            app.NumberofIterationsLabel = uilabel(app.LeftPanel);
+            app.NumberofIterationsLabel.HorizontalAlignment = 'right';
+            app.NumberofIterationsLabel.Position = [34 289 118 22];
+            app.NumberofIterationsLabel.Text = 'Number of Iterations:';
+
+            % Create NumberofIterationsEditField
+            app.NumberofIterationsEditField = uieditfield(app.LeftPanel, 'numeric');
+            app.NumberofIterationsEditField.Position = [157 289 52 22];
+            app.NumberofIterationsEditField.Value = 5;
+
+            % Create FlowoftheprogramButtonGroup
+            app.FlowoftheprogramButtonGroup = uibuttongroup(app.LeftPanel);
+            app.FlowoftheprogramButtonGroup.Title = 'Flow of the program';
+            app.FlowoftheprogramButtonGroup.Position = [174 65 146 77];
+
+            % Create StepbystepButton
+            app.StepbystepButton = uiradiobutton(app.FlowoftheprogramButtonGroup);
+            app.StepbystepButton.Text = 'Step-by-step';
+            app.StepbystepButton.Position = [6 31 90 22];
+
+            % Create AllAtOncePrettyPrintButton
+            app.AllAtOncePrettyPrintButton = uiradiobutton(app.FlowoftheprogramButtonGroup);
+            app.AllAtOncePrettyPrintButton.Text = 'AllAtOnce- PrettyPrint';
+            app.AllAtOncePrettyPrintButton.Position = [6 9 139 22];
+            app.AllAtOncePrettyPrintButton.Value = true;
+
+            % Create KmeansclusteringsetupLabel
+            app.KmeansclusteringsetupLabel = uilabel(app.LeftPanel);
+            app.KmeansclusteringsetupLabel.FontSize = 16;
+            app.KmeansclusteringsetupLabel.Position = [70 349 192 22];
+            app.KmeansclusteringsetupLabel.Text = 'K-means clustering set-up';
+
+            % Create CentroidsButtonGroup
+            app.CentroidsButtonGroup = uibuttongroup(app.LeftPanel);
+            app.CentroidsButtonGroup.Title = 'Centroids';
+            app.CentroidsButtonGroup.Position = [68 165 174 80];
+
+            % Create GenerateautomaticallyButton
+            app.GenerateautomaticallyButton = uiradiobutton(app.CentroidsButtonGroup);
+            app.GenerateautomaticallyButton.Text = 'Generate automatically';
+            app.GenerateautomaticallyButton.Position = [11 34 146 22];
+            app.GenerateautomaticallyButton.Value = true;
+
+            % Create InputmanuallyButton
+            app.InputmanuallyButton = uiradiobutton(app.CentroidsButtonGroup);
+            app.InputmanuallyButton.Text = 'Input manually';
+            app.InputmanuallyButton.Position = [11 12 100 22];
+
+            % Create Ifemptyprogramwillgenerage100randomdatapointsLabel
+            app.Ifemptyprogramwillgenerage100randomdatapointsLabel = uilabel(app.LeftPanel);
+            app.Ifemptyprogramwillgenerage100randomdatapointsLabel.FontSize = 9;
+            app.Ifemptyprogramwillgenerage100randomdatapointsLabel.Position = [216 317 94 29];
+            app.Ifemptyprogramwillgenerage100randomdatapointsLabel.Text = {'(If empty, program will'; 'generage 100 random'; 'data points)'};
+
+            % Create RightPanel
+            app.RightPanel = uipanel(app.GridLayout);
+            app.RightPanel.Layout.Row = 1;
+            app.RightPanel.Layout.Column = 2;
+
+            % Create MyUIAxes
+            app.MyUIAxes = uiaxes(app.RightPanel);
+            title(app.MyUIAxes, 'Clustering state')
+            xlabel(app.MyUIAxes, 'x1')
+            ylabel(app.MyUIAxes, 'x2')
+            app.MyUIAxes.Position = [8 70 444 301];
+
+            % Show the figure after all components are created
+            app.K_means_clustering.Visible = 'on';
+        end
+    end
+
+    % App creation and deletion
+    methods (Access = public)
+
+        % Construct app
+        function app = Kadlec_VSC_Task_3
+
+            % Create UIFigure and components
+            createComponents(app)
+
+            % Register the app with App Designer
+            registerApp(app, app.K_means_clustering)
+
+            if nargout == 0
+                clear app
+            end
+        end
+
+        % Code that executes before app deletion
+        function delete(app)
+
+            % Delete UIFigure when app is deleted
+            delete(app.K_means_clustering)
+        end
+    end
+end
